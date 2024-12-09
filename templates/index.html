@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG - Nauka Programowania</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <!-- Dodaj highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>RAG - Nauka Programowania</h1>
+        <div id="chat">
+            <div id="messages"></div>
+        </div>
+        <form id="question-form">
+            <input type="text" id="question" placeholder="Zadaj pytanie..." required>
+            <button type="submit">Wyślij</button>
+        </form>
+        <button id="reset-button">Resetuj rozmowę</button>
+        <button id="exit-button">Zakończ</button>
+    </div>
+
+    <script>
+        const form = document.getElementById("question-form");
+        const messagesDiv = document.getElementById("messages");
+        const resetButton = document.getElementById("reset-button");
+        const exitButton = document.getElementById("exit-button");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const question = document.getElementById("question").value;
+
+            // Wyświetl pytanie użytkownika
+            const userMessage = document.createElement("div");
+            userMessage.className = "user-message";
+            userMessage.textContent = `Ty: ${question}`;
+            messagesDiv.appendChild(userMessage);
+
+            // Wysyłanie pytania do serwera
+            const response = await fetch("/ask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `question=${encodeURIComponent(question)}`,
+            });
+            const data = await response.json();
+
+            // Wyświetl odpowiedź
+            const botMessage = document.createElement("div");
+            botMessage.className = "bot-message";
+
+            if (data.answer.includes("```")) {
+                const codeBlocks = data.answer.split(/```/); // Podziel na fragmenty kodu i tekstu
+                botMessage.innerHTML = "";
+                codeBlocks.forEach((block, index) => {
+                    if (index % 2 === 1) { // Fragmenty kodu (nieparzyste indeksy)
+                        const codeElement = document.createElement("pre");
+                        codeElement.innerHTML = `<code class="language-python">${block.trim()}</code>`;
+                        botMessage.appendChild(codeElement);
+
+                        // Podświetl składnię
+                        hljs.highlightElement(codeElement);
+                    } else { // Zwykły tekst
+                        const textElement = document.createElement("p");
+                        textElement.innerHTML = block.replace(/\n/g, "<br>");
+                        botMessage.appendChild(textElement);
+                    }
+                });
+            } else {
+                botMessage.innerHTML = `RAG: ${data.answer.replace(/\n/g, "<br>")}`;
+            }
+
+            messagesDiv.appendChild(botMessage);
+
+            // Wyczyść pole wejścia
+            document.getElementById("question").value = "";
+        });
+
+        resetButton.addEventListener("click", async () => {
+            // Resetowanie rozmowy
+            await fetch("/reset", { method: "POST" });
+            messagesDiv.innerHTML = "";
+        });
+
+        exitButton.addEventListener("click", async () => {
+            // Zakończenie aplikacji
+            await fetch("/exit", { method: "POST" });
+        });
+    </script>
+</body>
+</html>

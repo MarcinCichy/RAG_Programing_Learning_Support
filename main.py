@@ -1,31 +1,26 @@
-from pdf_processor import extract_text_from_pdf
-from rag_engine import create_faiss_index, generate_answer, simplify_text
+from rag_engine import create_faiss_index, preprocess_documents, generate_answer
 from sentence_transformers import SentenceTransformer
 
-# Wczytaj tekst z PDF
-pdf_text = extract_text_from_pdf("Docs/Code_the_Classics-book.pdf", start_page=82, end_page=114)
+# Ścieżka do pliku PDF
+PDF_PATH = "Docs/Code_the_Classics-book.pdf"
 
-# Podziel tekst na fragmenty (np. akapity)
-documents = pdf_text.split("\n\n")
+# Przetwórz dokumenty
+simplified_documents = preprocess_documents(PDF_PATH, start_page=82, end_page=114)
 
-# Uprość każdy fragment tekstu
-simplified_documents = [simplify_text(doc) for doc in documents]
-
-# Stwórz indeks FAISS na podstawie uproszczonych tekstów
-model = SentenceTransformer('all-MiniLM-L6-v2')
-index, documents = create_faiss_index(simplified_documents)  # Przekaż listę dokumentów
+# Stwórz indeks FAISS na podstawie uproszczonych dokumentów
+index, simplified_documents = create_faiss_index(simplified_documents)
 print(f"Liczba dokumentów w indeksie: {index.ntotal}")
 
-# Komunikacja z użytkownikiem
-while True:
-    question = input("Zadaj pytanie (lub wpisz 'exit', aby zakonczyć): ")
-    if question.lower() == 'exit':
-        break
+# Interfejs konsolowy
+def run_console_interface():
+    while True:
+        question = input("Zadaj pytanie (lub wpisz 'exit', aby zakończyć): ")
+        if question.lower() == 'exit':
+            break
+        if len(question.strip()) < 5:
+            question = "Kontynuujmy tworzenie gry Frogger. Co powinienem zrobić dalej?"
+        answer = generate_answer(question, simplified_documents, index, SentenceTransformer('all-MiniLM-L6-v2'))
+        print("\nOdpowiedź:", answer)
 
-    # Obsługa krótkich pytań
-    if len(question.strip()) < 5:  # Jeśli pytanie jest krótkie
-        question = "Proszę kontynuować pomoc w tworzeniu gry Frogger."
-
-    # Generowanie odpowiedzi
-    answer = generate_answer(question, documents, index, model)
-    print("\nOdpowiedź:", answer)
+if __name__ == "__main__":
+    run_console_interface()
