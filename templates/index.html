@@ -5,91 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAG - Nauka Programowania</title>
     <link rel="stylesheet" href="/static/styles.css">
-    <!-- Dodaj highlight.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>RAG - Nauka Programowania</h1>
-        <div id="chat">
-            <div id="messages"></div>
+        <div class="sidebar">
+            <h2>Twoje konwersacje</h2>
+            <ul id="conversation-list"></ul>
+            <button id="new-conversation" class="green-button">Nowa konwersacja</button>
         </div>
-        <form id="question-form">
-            <input type="text" id="question" placeholder="Zadaj pytanie..." required>
-            <button type="submit">Wyślij</button>
-        </form>
-        <button id="reset-button">Resetuj rozmowę</button>
-        <button id="exit-button">Zakończ</button>
+        <div class="chat">
+            <h1>RAG - Nauka Programowania</h1>
+            <div id="chat">
+                <div id="messages"></div>
+            </div>
+            <div class="input-area">
+                <form id="question-form">
+                    <input type="text" id="question" placeholder="Zadaj pytanie..." required>
+                    <button type="submit" class="green-button">Wyślij</button>
+                </form>
+                <div class="buttons">
+                    <button id="reset-button" class="yellow-button">Resetuj rozmowę</button>
+                    <button id="exit-button" class="red-button">Zakończ</button>
+                </div>
+            </div>
+        </div>
     </div>
-
     <script>
-        const form = document.getElementById("question-form");
+        const conversationList = document.getElementById("conversation-list");
         const messagesDiv = document.getElementById("messages");
-        const resetButton = document.getElementById("reset-button");
-        const exitButton = document.getElementById("exit-button");
+        const newConversationButton = document.getElementById("new-conversation");
+        const form = document.getElementById("question-form");
+
+        async function fetchConversations() {
+            const response = await fetch("/");
+            const html = await response.text();
+            const match = html.match(/conversations = (\[.*?\])/);
+            return match ? JSON.parse(match[1]) : [];
+        }
+
+        function renderConversations(conversations) {
+            conversationList.innerHTML = "";
+            conversations.forEach(id => {
+                const li = document.createElement("li");
+                li.className = "conversation-item";
+
+                const name = document.createElement("span");
+                name.textContent = `Konwersacja ${id}`;
+                name.className = "conversation-name";
+                name.addEventListener("click", () => loadConversation(id));
+
+                const deleteButton = document.createElement("button");
+                deleteButton.textContent = "Usuń";
+                deleteButton.className = "delete-button";
+                deleteButton.addEventListener("click", () => deleteConversation(id));
+
+                li.appendChild(name);
+                li.appendChild(deleteButton);
+                conversationList.appendChild(li);
+            });
+        }
+
+        async function loadConversation(id) {
+            const response = await fetch("/load_conversation", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ conversation_id: id })
+            });
+            const data = await response.json();
+            messagesDiv.innerHTML = "";
+            data.messages.forEach(message => {
+                const userMessage = document.createElement("div");
+                userMessage.className = "user-message";
+                userMessage.textContent = `Ty: ${message.user}`;
+                messagesDiv.appendChild(userMessage);
+
+                const botMessage = document.createElement("div");
+                botMessage.className = "bot-message";
+                botMessage.innerHTML = message.bot.replace(/\n/g, "<br>");
+                if (message.bot.includes("```")) {
+                    const codeBlocks = message.bot.split(/```/);
+                    codeBlocks.forEach((block, index) => {
+                        if (index % 2 === 1) {
+                            const codeElement = document.createElement("pre");
+                            codeElement.innerHTML = `<code class="language-python">${block}</code>`;
+                            botMessage.appendChild(codeElement);
+                            hljs.highlightElement(codeElement);
+                        }
+                    });
+                }
+                messagesDiv.appendChild(botMessage);
+            });
+        }
+
+        async function deleteConversation(id) {
+            const response = await fetch("/delete_conversation", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ conversation_id: id })
+            });
+            const data = await response.json();
+            renderConversations(data.conversations);
+        }
+
+        async function createNewConversation() {
+            const response = await fetch("/new_conversation", { method: "POST" });
+            const data = await response.json();
+            renderConversations(data.conversations);
+            messagesDiv.innerHTML = "";
+        }
 
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const question = document.getElementById("question").value;
 
-            // Wyświetl pytanie użytkownika
             const userMessage = document.createElement("div");
             userMessage.className = "user-message";
             userMessage.textContent = `Ty: ${question}`;
             messagesDiv.appendChild(userMessage);
 
-            // Wysyłanie pytania do serwera
             const response = await fetch("/ask", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: `question=${encodeURIComponent(question)}`,
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `question=${encodeURIComponent(question)}`
             });
-            const data = await response.json();
 
-            // Wyświetl odpowiedź
+            const data = await response.json();
             const botMessage = document.createElement("div");
             botMessage.className = "bot-message";
-
+            botMessage.innerHTML = data.answer.replace(/\n/g, "<br>");
             if (data.answer.includes("```")) {
-                const codeBlocks = data.answer.split(/```/); // Podziel na fragmenty kodu i tekstu
-                botMessage.innerHTML = "";
+                const codeBlocks = data.answer.split(/```/);
                 codeBlocks.forEach((block, index) => {
-                    if (index % 2 === 1) { // Fragmenty kodu (nieparzyste indeksy)
+                    if (index % 2 === 1) {
                         const codeElement = document.createElement("pre");
-                        codeElement.innerHTML = `<code class="language-python">${block.trim()}</code>`;
+                        codeElement.innerHTML = `<code class="language-python">${block}</code>`;
                         botMessage.appendChild(codeElement);
-
-                        // Podświetl składnię
                         hljs.highlightElement(codeElement);
-                    } else { // Zwykły tekst
-                        const textElement = document.createElement("p");
-                        textElement.innerHTML = block.replace(/\n/g, "<br>");
-                        botMessage.appendChild(textElement);
                     }
                 });
-            } else {
-                botMessage.innerHTML = `RAG: ${data.answer.replace(/\n/g, "<br>")}`;
             }
-
             messagesDiv.appendChild(botMessage);
-
-            // Wyczyść pole wejścia
             document.getElementById("question").value = "";
         });
 
-        resetButton.addEventListener("click", async () => {
-            // Resetowanie rozmowy
+        newConversationButton.addEventListener("click", createNewConversation);
+
+        document.getElementById("reset-button").addEventListener("click", async () => {
             await fetch("/reset", { method: "POST" });
             messagesDiv.innerHTML = "";
         });
 
-        exitButton.addEventListener("click", async () => {
-            // Zakończenie aplikacji
+        document.getElementById("exit-button").addEventListener("click", async () => {
             await fetch("/exit", { method: "POST" });
         });
+
+        window.onload = async () => {
+            renderConversations(await fetchConversations());
+        };
     </script>
 </body>
 </html>
