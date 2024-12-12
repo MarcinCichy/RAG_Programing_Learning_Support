@@ -165,5 +165,24 @@
             renderConversations(await fetchConversations());
         };
     </script>
+    <script>
+    const exitButton = document.getElementById("exit-button");
+
+    exitButton.addEventListener("click", async () => {
+        const response = await fetch("/exit", { method: "POST" });
+        const data = await response.json();
+
+        const botMessage = document.createElement("div");
+        botMessage.className = "bot-message";
+        botMessage.innerHTML = `<strong>${data.message}</strong><br>
+            Liczba konwersacji: ${data.conversation_count}<br>
+            Liczba zadanych pytań: ${data.questions_asked}`;
+        messagesDiv.appendChild(botMessage);
+
+        // Opcjonalnie: wyłącz interakcje
+        form.remove();
+        document.querySelector(".buttons").remove();
+    });
+    </script>
 </body>
 </html>

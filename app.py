@@ -88,11 +88,25 @@ def reset_chat():
 
 @app.route("/exit", methods=["POST"])
 def exit_app():
-    """Zamykanie aplikacji."""
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func:
-        func()
-    return jsonify({"status": "exited"})
+    """Zamykanie aplikacji z podsumowaniem."""
+    summary = {
+        "message": "Aplikacja została zamknięta. Dziękujemy za korzystanie z RAG!",
+        "conversation_count": len(conversations),
+        "questions_asked": sum(len(conv) for conv in conversations.values()),
+    }
+
+    # Wysyłanie odpowiedzi do przeglądarki
+    response = jsonify(summary)
+    response.status_code = 200
+
+    # Wyłączenie serwera po wysłaniu odpowiedzi
+    def shutdown_server():
+        func = request.environ.get('werkzeug.server.shutdown')
+        if func:
+            func()
+    shutdown_server()
+
+    return response
 
 if __name__ == "__main__":
     app.run(debug=True)
