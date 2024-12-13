@@ -120,4 +120,4 @@ Potential extensions:
 3. Deploying the application to a cloud platform like Heroku.
 ___
 ### Screenshot:
-![Main application interface](screenshots/screenshot1.png "Main interface")
+![Main application interface](Screenshots/screenshot1.png "Main interface")
