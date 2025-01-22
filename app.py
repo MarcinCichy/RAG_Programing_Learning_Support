@@ -86,6 +86,7 @@ def reset_chat():
         save_conversations()
     return jsonify({"status": "reset"})
 
+
 @app.route("/exit", methods=["POST"])
 def exit_app():
     """Zamykanie aplikacji z podsumowaniem."""
@@ -107,6 +108,7 @@ def exit_app():
     shutdown_server()
 
     return response
+
 
 if __name__ == "__main__":
     app.run(debug=True)

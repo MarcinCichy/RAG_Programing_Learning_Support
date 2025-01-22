@@ -1,5 +1,8 @@
 # RAG - Learning Programming: Frogger Game
-
+___
+### Screenshot:
+![Main application interface](Screenshots/screenshot1.png "Main interface")
+___
 ## Project Description
 This project is an implementation of a RAG (Retrieval-Augmented Generation) system that helps users, especially beginner programmers, learn programming by creating the game Frogger in Python. The system is based on knowledge extracted from a PDF file describing the process of creating the Frogger game and supports users in a simple, accessible way.
 
@@ -118,6 +121,4 @@ Potential extensions:
 1. Adding support for multiple languages.
 2. Integrating with a database to store conversation history.
 3. Deploying the application to a cloud platform like Heroku.
-___
-### Screenshot:
-![Main application interface](Screenshots/screenshot1.png "Main interface")
+

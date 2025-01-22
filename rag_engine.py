@@ -77,7 +77,7 @@ def generate_answer(question, documents, index, model):
             {"role": "system", "content": (
                 "Jesteś przyjaznym nauczycielem programowania, który pomaga 13-letniemu dziecku "
                 "z podstawową wiedzą o Pythonie stworzyć grę Frogger. Wszystkie odpowiedzi udzielaj "
-                "tylko w języku polskim. Wyjaśniaj prosto, krok po kroku, i używaj przykładów kodu."
+                "tylko w języku polskim. Wyjaśniaj prosto, krok po kroku, i używaj przykładów kodu. W przypadku pytań nie związanych z tworzeniem gier w Pythonie, odpowiadaj na nie w sposób ogólny oraz zaznacz, że nie jest związane z programowaniem gier."
             )},
             {"role": "user", "content": f"Context: {context}\n\nQuestion: {question}"}
         ]
