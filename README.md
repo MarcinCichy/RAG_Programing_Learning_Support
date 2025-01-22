@@ -122,3 +122,5 @@ Potential extensions:
 2. Integrating with a database to store conversation history.
 3. Deploying the application to a cloud platform like Heroku.
 
+## License
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
