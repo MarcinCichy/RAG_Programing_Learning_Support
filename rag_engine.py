@@ -13,7 +13,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Funkcja do uproszczenia tekstu
 def simplify_text(text, model="gpt-3.5-turbo"):
-    """Upraszcza tekst dla dziecka uczącego się Pythona."""
     simplify_response = openai.ChatCompletion.create(
         model=model,
         messages=[
@@ -24,7 +23,7 @@ def simplify_text(text, model="gpt-3.5-turbo"):
             {"role": "user", "content": text}
         ]
     )
-    return simplify_response['choices'][0]['message']['content']
+    return simplify_response.choices[0].message.content
 
 # Funkcja do liczenia tokenów
 def count_tokens(text, model="gpt-3.5-turbo"):
@@ -82,4 +81,4 @@ def generate_answer(question, documents, index, model):
             {"role": "user", "content": f"Context: {context}\n\nQuestion: {question}"}
         ]
     )
-    return answer_response['choices'][0]['message']['content']
+    return answer_response.choices[0].message.content
