@@ -169,3 +169,18 @@ form {
 .delete-button:hover {
     background-color: #8b1a1a;
 }
+
+.conversation-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 5px;
+    cursor: pointer;
+}
+
+/* Styl dla aktywnej konwersacji */
+.conversation-item.active {
+    background-color: #333;
+    border-radius: 5px;
+}

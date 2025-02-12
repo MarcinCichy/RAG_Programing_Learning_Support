@@ -8,10 +8,8 @@ from main import simplified_documents, index
 
 app = Flask(__name__)
 
-# Ścieżka do pliku z zapisanymi konwersacjami
 CONVERSATIONS_FILE = "conversations.json"
 
-# Wczytaj zapisane konwersacje
 def load_conversations():
     try:
         with open(CONVERSATIONS_FILE, "r") as file:
@@ -19,23 +17,23 @@ def load_conversations():
     except FileNotFoundError:
         return {}
 
-# Zapisz konwersacje do pliku
 def save_conversations():
     with open(CONVERSATIONS_FILE, "w") as file:
         json.dump(conversations, file, indent=4)
 
-# Inicjalizacja globalnych zmiennych
 conversations = load_conversations()
 current_conversation_id = None
 
 @app.route("/")
 def home():
     """Strona główna."""
-    return render_template("index.html", conversations=list(conversations.keys()))
+    # Przekazujemy do szablonu listę konwersacji oraz aktualnie wybraną konwersację
+    return render_template("index.html",
+                           conversations=list(conversations.keys()),
+                           current_conversation=current_conversation_id)
 
 @app.route("/new_conversation", methods=["POST"])
 def new_conversation():
-    """Rozpocznij nową konwersację."""
     global current_conversation_id
     current_conversation_id = str(len(conversations) + 1)
     conversations[current_conversation_id] = []
@@ -44,7 +42,6 @@ def new_conversation():
 
 @app.route("/load_conversation", methods=["POST"])
 def load_conversation():
-    """Załaduj istniejącą konwersację."""
     global current_conversation_id
     conversation_id = request.json.get("conversation_id")
     current_conversation_id = conversation_id
@@ -53,7 +50,6 @@ def load_conversation():
 
 @app.route("/delete_conversation", methods=["POST"])
 def delete_conversation():
-    """Usuń istniejącą konwersację."""
     global conversations
     conversation_id = request.json.get("conversation_id")
     if conversation_id in conversations:
@@ -63,14 +59,11 @@ def delete_conversation():
 
 @app.route("/ask", methods=["POST"])
 def ask_question():
-    """Obsługa pytań użytkownika."""
     global current_conversation_id
     user_question = request.form["question"]
 
-    # Generowanie odpowiedzi
     answer = generate_answer(user_question, simplified_documents, index, SentenceTransformer('all-MiniLM-L6-v2'))
 
-    # Dodaj wiadomość do aktualnej konwersacji
     if current_conversation_id:
         conversations[current_conversation_id].append({"user": user_question, "bot": answer})
         save_conversations()
@@ -79,28 +72,28 @@ def ask_question():
 
 @app.route("/reset", methods=["POST"])
 def reset_chat():
-    """Resetowanie aktualnej rozmowy."""
     global current_conversation_id
     if current_conversation_id in conversations:
         conversations[current_conversation_id] = []
         save_conversations()
     return jsonify({"status": "reset"})
 
+def get_openai_balance():
+    # UWAGA: W tej funkcji należy zaimplementować pobieranie rzeczywistego salda konta OpenAI.
+    # Na potrzeby przykładu zwracamy przykładową wartość.
+    return "100 USD"
 
 @app.route("/exit", methods=["POST"])
 def exit_app():
-    """Zamykanie aplikacji z podsumowaniem."""
     summary = {
         "message": "Aplikacja została zamknięta. Dziękujemy za korzystanie z RAG!",
         "conversation_count": len(conversations),
         "questions_asked": sum(len(conv) for conv in conversations.values()),
+        "openai_balance": get_openai_balance()
     }
-
-    # Wysyłanie odpowiedzi do przeglądarki
     response = jsonify(summary)
     response.status_code = 200
 
-    # Wyłączenie serwera po wysłaniu odpowiedzi
     def shutdown_server():
         func = request.environ.get('werkzeug.server.shutdown')
         if func:
@@ -108,7 +101,6 @@ def exit_app():
     shutdown_server()
 
     return response
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5010)

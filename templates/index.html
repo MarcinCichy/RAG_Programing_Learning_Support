@@ -9,6 +9,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 </head>
 <body>
+    <!-- Globalne zmienne przekazywane z serwera -->
+    <script>
+        // Lista konwersacji oraz ID aktualnie wybranej konwersacji
+        let conversationList = {{ conversations|tojson }};
+        let currentConversation = {{ current_conversation|tojson }};
+    </script>
+
     <div class="container">
         <div class="sidebar">
             <h2>Twoje konwersacje</h2>
@@ -32,24 +39,20 @@
             </div>
         </div>
     </div>
+
     <script>
-        const conversationList = document.getElementById("conversation-list");
+        const conversationListElement = document.getElementById("conversation-list");
         const messagesDiv = document.getElementById("messages");
         const newConversationButton = document.getElementById("new-conversation");
         const form = document.getElementById("question-form");
 
-        async function fetchConversations() {
-            const response = await fetch("/");
-            const html = await response.text();
-            const match = html.match(/conversations = (\[.*?\])/);
-            return match ? JSON.parse(match[1]) : [];
-        }
-
+        // Funkcja renderująca listę konwersacji – podświetlamy aktywną
         function renderConversations(conversations) {
-            conversationList.innerHTML = "";
+            conversationListElement.innerHTML = "";
             conversations.forEach(id => {
                 const li = document.createElement("li");
-                li.className = "conversation-item";
+                // Jeśli dana konwersacja jest aktualnie wybrana, dodajemy klasę "active"
+                li.className = "conversation-item" + (id === currentConversation ? " active" : "");
 
                 const name = document.createElement("span");
                 name.textContent = `Konwersacja ${id}`;
@@ -59,14 +62,18 @@
                 const deleteButton = document.createElement("button");
                 deleteButton.textContent = "Usuń";
                 deleteButton.className = "delete-button";
-                deleteButton.addEventListener("click", () => deleteConversation(id));
+                deleteButton.addEventListener("click", (e) => {
+                    e.stopPropagation(); // zapobiegamy wywołaniu loadConversation
+                    deleteConversation(id);
+                });
 
                 li.appendChild(name);
                 li.appendChild(deleteButton);
-                conversationList.appendChild(li);
+                conversationListElement.appendChild(li);
             });
         }
 
+        // Ładowanie wybranej konwersacji
         async function loadConversation(id) {
             const response = await fetch("/load_conversation", {
                 method: "POST",
@@ -74,6 +81,8 @@
                 body: JSON.stringify({ conversation_id: id })
             });
             const data = await response.json();
+            currentConversation = id; // ustawiamy aktywną konwersację
+            renderConversations(conversationList);
             messagesDiv.innerHTML = "";
             data.messages.forEach(message => {
                 const userMessage = document.createElement("div");
@@ -99,6 +108,7 @@
             });
         }
 
+        // Usuwanie konwersacji
         async function deleteConversation(id) {
             const response = await fetch("/delete_conversation", {
                 method: "POST",
@@ -106,16 +116,28 @@
                 body: JSON.stringify({ conversation_id: id })
             });
             const data = await response.json();
-            renderConversations(data.conversations);
+            // Aktualizujemy globalną listę konwersacji
+            conversationList = data.conversations;
+            // Jeśli usunięta konwersacja była aktywna – czyścimy zmienną
+            if (id === currentConversation) {
+                currentConversation = null;
+                messagesDiv.innerHTML = "";
+            }
+            renderConversations(conversationList);
         }
 
+        // Tworzenie nowej konwersacji
         async function createNewConversation() {
             const response = await fetch("/new_conversation", { method: "POST" });
             const data = await response.json();
-            renderConversations(data.conversations);
+            // Aktualizujemy globalną listę i ustawiamy nową konwersację jako aktywną
+            conversationList = data.conversations;
+            currentConversation = data.conversation_id;
+            renderConversations(conversationList);
             messagesDiv.innerHTML = "";
         }
 
+        // Obsługa wysyłania pytania
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const question = document.getElementById("question").value;
@@ -158,31 +180,26 @@
         });
 
         document.getElementById("exit-button").addEventListener("click", async () => {
-            await fetch("/exit", { method: "POST" });
+            const response = await fetch("/exit", { method: "POST" });
+            const data = await response.json();
+
+            const botMessage = document.createElement("div");
+            botMessage.className = "bot-message";
+            botMessage.innerHTML = `<strong>${data.message}</strong><br>
+                Liczba konwersacji: ${data.conversation_count}<br>
+                Liczba zadanych pytań: ${data.questions_asked}<br>
+                Saldo OpenAI: ${data.openai_balance}`;
+            messagesDiv.appendChild(botMessage);
+
+            // Opcjonalnie: wyłącz interakcje
+            form.remove();
+            document.querySelector(".buttons").remove();
         });
 
-        window.onload = async () => {
-            renderConversations(await fetchConversations());
+        // Przy starcie strony od razu renderujemy listę konwersacji
+        window.onload = () => {
+            renderConversations(conversationList);
         };
-    </script>
-    <script>
-    const exitButton = document.getElementById("exit-button");
-
-    exitButton.addEventListener("click", async () => {
-        const response = await fetch("/exit", { method: "POST" });
-        const data = await response.json();
-
-        const botMessage = document.createElement("div");
-        botMessage.className = "bot-message";
-        botMessage.innerHTML = `<strong>${data.message}</strong><br>
-            Liczba konwersacji: ${data.conversation_count}<br>
-            Liczba zadanych pytań: ${data.questions_asked}`;
-        messagesDiv.appendChild(botMessage);
-
-        // Opcjonalnie: wyłącz interakcje
-        form.remove();
-        document.querySelector(".buttons").remove();
-    });
     </script>
 </body>
 </html>
